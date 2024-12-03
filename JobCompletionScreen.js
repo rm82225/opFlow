@@ -1,59 +1,13 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from "react-native";
 import RNHTMLtoPDF from "react-native-html-to-pdf";
 
+
 const JobCompletionScreen = ({ route }) => {
-  const { job } = route.params; // Job details passed via navigation
+  const { job, descriptions } = route.params; // Extract job and description from navigation
+
 
   const generatePDF = async () => {
-    const htmlContent = `
-      <html>
-      <head>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-          }
-          h1 {
-            color: #007bff;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-          th, td {
-            padding: 10px;
-            border: 1px solid #ddd;
-          }
-          th {
-            background-color: #f4f4f4;
-            text-align: left;
-          }
-        </style>
-      </head>
-      <body>
-        <h1>Job Completion Report</h1>
-        <p><strong>Customer Name:</strong> ${job.customerName}</p>
-        <p><strong>Job Type:</strong> ${job.type}</p>
-        <p><strong>Address:</strong> ${job.address}</p>
-        <p><strong>Description:</strong> ${job.description}</p>
-        <p><strong>Scheduled Start:</strong> ${job.startDate}</p>
-        <p><strong>Completion Time:</strong> ${new Date().toLocaleString()}</p>
-        <br>
-        <h2>Work Details</h2>
-        <table>
-          <tr>
-            <th>Work Description</th>
-            <th>Status</th>
-          </tr>
-          <tr>
-            <td>Example Work Carried Out</td>
-            <td>Completed</td>
-          </tr>
-        </table>
-      </body>
-      </html>
-    `;
 
     try {
       const file = await RNHTMLtoPDF.convert({
@@ -69,19 +23,56 @@ const JobCompletionScreen = ({ route }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Job Completion</Text>
-      <Text style={styles.label}>Customer Name: {job.customerName}</Text>
-      <Text style={styles.label}>Address: {job.address}</Text>
-      <Text style={styles.label}>Job Type: {job.type}</Text>
-      <Text style={styles.label}>Description: {job.description}</Text>
-
-      {/* Complete Job and Generate PDF Button */}
+    <ScrollView style={styles.container}>
+      {/* Header Section */}
+      <View style={styles.header}>
+        {/* Placeholder for Logo */}
+        <View style={styles.logoContainer}>
+          <Text style={styles.logoPlaceholder}>LOGO</Text>
+        </View>
+        {/* Placeholder for Company Address */}
+        <View style={styles.addressContainer}>
+          <Text style={styles.addressText}>Company Name</Text>
+          <Text style={styles.addressText}>Address Line 1</Text>
+          <Text style={styles.addressText}>Address Line 2</Text>
+          <Text style={styles.addressText}>City, ZIP</Text>
+        </View>
+      </View>
+  
+      {/* Job Details Section */}
+      <View style={styles.detailsContainer}>
+        <Text style={styles.title}>Service</Text>
+        <Text style={styles.label}>Customer: {job.contactName}</Text>
+        <Text style={styles.label}>Address: {job.location}</Text>
+        <Text style={styles.label}>Resource: {job.resource || "N/A"}</Text>
+        <Text style={styles.label}>Job Type: {job.title}</Text>
+        <Text style={styles.label}>Reference: {job.reference}</Text>
+        <Text style={styles.label}>Scheduled Start: {job.scheduledDate}</Text>
+        <Text style={styles.label}>Job Duration: {job.duration} Minutes</Text>
+      </View>
+  
+      {/* Worksheet Section */}
+      <View style={styles.worksheetContainer}>
+        <Text style={styles.title}>Worksheet</Text>
+        <Text style={styles.label}>Before Pictures:</Text>
+        <Text style={styles.label}>Description of Works Carried Out: {job.descriptions} </Text>
+        <Text style={styles.label}>After Pictures:</Text>
+      </View>
+  
+      {/* Map Placeholder */}
+      <View style={styles.mapPlaceholder}>
+        <Text style={styles.mapText}>Map Goes Here</Text>
+      </View>
+  
+      {/* Generate PDF Button */}
       <TouchableOpacity style={styles.generateButton} onPress={generatePDF}>
         <Text style={styles.generateButtonText}>Generate Job Sheet PDF</Text>
       </TouchableOpacity>
-    </View>
+     
+  </ScrollView>
+
   );
+  
 };
 
 const styles = StyleSheet.create({
@@ -90,15 +81,59 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "#f9f9f9",
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 20,
+    borderBottomWidth: 1,
+    borderColor: "#ddd",
+    paddingBottom: 10,
+  },
+  logoContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  logoPlaceholder: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#555",
+  },
+  addressContainer: {
+    flex: 1,
+    alignItems: "flex-end",
+  },
+  addressText: {
+    fontSize: 14,
+    color: "#333",
+  },
+  detailsContainer: {
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
     color: "#333",
   },
   label: {
     fontSize: 16,
-    marginBottom: 10,
+    marginBottom: 5,
+    color: "#555",
+  },
+  worksheetContainer: {
+    marginBottom: 20,
+  },
+  mapPlaceholder: {
+    height: 150,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#e0e0e0",
+    marginBottom: 20,
+  },
+  mapText: {
+    color: "#555",
+    fontSize: 14,
   },
   generateButton: {
     marginTop: 20,
@@ -113,5 +148,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 });
+
 
 export default JobCompletionScreen;

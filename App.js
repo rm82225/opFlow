@@ -14,8 +14,12 @@ import { Entypo } from "@expo/vector-icons"; // For the burger menu icon
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import HelpPage from "./HelpPage";
-import PdfViewer from "./PdfViewer";
-
+// import PdfViewer from "./PdfViewer";
+import JobCompletionScreen from "./JobCompletionScreen";
+import DateTimePicker from '@react-native-community/datetimepicker';
+import styles from "./styles";
+import Header from './Header'; // Import the custom header
+import ProfilePage from "./ProfilePage";
 
 /*Use navigation method so if the menu is selected and revisited, it reopens*/
 
@@ -27,20 +31,11 @@ function App({ navigation }) {
       title: "Safety Inspection",
       description: "Inspect fire safety equipment.",
       location: "Forge Lane, Leeds, LS1 2TP",
-      scheduledDate: "2024-11-27",
-      duration: "2 hours",
+      scheduledDate: "11-10-2024",
+      duration: "60",
       status: "scheduled", // Possible values: 'scheduled', 'started', 'completed'
     },
-    {
-      id: "2",
-      contactName: "Hardy Solicitors",
-      title: "New Installation",
-      description: "Install a new software system.",
-      location: "The Crescent, Hype Park, LS6 2NW",
-      scheduledDate: "2024-11-27",
-      duration: "4 hours",
-      status: "scheduled", // Possible values: 'scheduled', 'started', 'completed'
-    },
+    
   ]);
 
   const [menuVisible, setMenuVisible] = useState(false); // State for burger menu
@@ -52,10 +47,12 @@ function App({ navigation }) {
     title: "",
     description: "",
     location: "",
+    reference: "",
     scheduledDate: "",
     duration: "",
   });
 
+  const [showDatePicker, setShowDatePicker] = useState(false); // State for showing the date picker
 
   
   useEffect(() => {
@@ -119,24 +116,32 @@ function App({ navigation }) {
     setModalVisible(false);
   };
 
+  // Set the variable for 'description of works' before completing a job. 
+  const [jobDescriptions, setJobDescriptions] = useState({}); // Stores descriptions by job ID
+  const [isPromptVisible, setIsPromptVisible] = useState(false);
+
+  const [currentJobId, setCurrentJobId] = useState(null); // Tracks the currently active job ID
+
+
   const renderJob = (job) => (
     <TouchableOpacity
       key={job.id}
       style={styles.jobContainer}
       onPress={() => handleJobPress(job)}
     >
+      {/*Declare statuses and icons */}
       <View style={styles.iconContainer}>
         {job.status === "scheduled" && (
-          <FontAwesome name="calendar" size={24} color="#007bff" />
+          <FontAwesome name="calendar" size={30} color="#007bff" />
         )}
         {job.status === "started" && (
-          <FontAwesome name="play-circle" size={24} color="purple" />
+          <FontAwesome name="play-circle" size={30} color="purple" />
         )}
         {job.status === "completed" && (
-          <FontAwesome name="thumbs-up" size={24} color="green" />
+          <FontAwesome name="thumbs-up" size={30} color="green" />
         )}
         {job.status === "completed with issues" && (
-          <FontAwesome name="thumbs-down" size={24} color="red" />
+          <FontAwesome name="thumbs-down" size={30} color="red" />
         )}
       </View>
       <View style={styles.jobDetails}>
@@ -147,22 +152,24 @@ function App({ navigation }) {
     </TouchableOpacity>
   );
 
+  {/*Declare variable for grouping jobs by date */}
   const groupedJobs = groupJobsByDate();
 
-
-
-
   return (
+    
     <View style={styles.container}>
+
     {/* Header with Burger Menu */}
+
+
     <View style={styles.header}>
-      <Text style={styles.headerText}>Your Jobs</Text>
       <TouchableOpacity onPress={() => setMenuVisible(true)}>
-        <Entypo name="menu" size={44} color="black" />
+        <Entypo name="menu" size={44} color="black"/>
       </TouchableOpacity>
     </View>
 
     {/* Burger Menu Modal */}
+
     <Modal
         visible={menuVisible}
         transparent={true}
@@ -173,32 +180,20 @@ function App({ navigation }) {
       <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Menu</Text>
+            
             <TouchableOpacity
               style={styles.menuOption}
-              onPress={() => {
-                setMenuVisible(false);
-                alert("Navigate to Timesheet");
-              }}
-            >
-              <Text style={styles.menuOptionText}>Timesheet</Text>
+              onPress={() => navigation.navigate("ProfilePage")}
+              >
+                
+              <Text style={styles.menuOptionText}>Account Settings</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity
               style={styles.menuOption}
-              onPress={() => {
-                setMenuVisible(false);
-                alert("Navigate to Jobs");
-              }}
+              onPress={() => navigation.navigate("JobList")}
             >
               <Text style={styles.menuOptionText}>Jobs</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.menuOption}
-              onPress={() => {
-                setMenuVisible(false);
-                alert("Navigate to CRM");
-              }}
-            >
-              <Text style={styles.menuOptionText}>CRM</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -208,6 +203,7 @@ function App({ navigation }) {
         
               <Text style={styles.menuOptionText}>Help</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity
               style={[styles.menuOption, { backgroundColor: "red" }]}
               onPress={() => setMenuVisible(false)}
@@ -218,6 +214,7 @@ function App({ navigation }) {
         </View>
       </Modal>
 
+       {/*Group jobs by planned start date */}        
       <FlatList
         data={Object.keys(groupedJobs)}
         keyExtractor={(date) => date}
@@ -272,14 +269,34 @@ function App({ navigation }) {
             placeholder="Address"
             value={newJob.location}
             onChangeText={(text) => setNewJob((prev) => ({ ...prev, location: text }))} />
+          // Updated component for date selection
+          <View>
+            <TouchableOpacity
+                style={styles.input}
+                onPress={() => setShowDatePicker(true)}
+              >
+              <Text>{newJob.scheduledDate || "Select Start Date"}</Text>
+            </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={newJob.scheduledDate ? new Date(newJob.scheduledDate) : new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(false); // Close the picker
+                    if (selectedDate) {
+                      const formattedDate = selectedDate.toISOString().split("T")[0]; // Format the date (YYYY-MM-DD)
+                      setNewJob((prev) => ({ ...prev, scheduledDate: formattedDate }));
+                    }
+                  }}
+                />
+              )}
+          </View>
+
+
           <TextInput
             style={styles.input}
-            placeholder="Start Date (DD-MM-YYYY)"
-            value={newJob.scheduledDate}
-            onChangeText={(text) => setNewJob((prev) => ({ ...prev, scheduledDate: text }))} />
-          <TextInput
-            style={styles.input}
-            placeholder="Duration (e.g., 2 hours)"
+            placeholder="Duration (e.g., 60 Minutes)"
             value={newJob.duration}
             onChangeText={(text) => setNewJob((prev) => ({ ...prev, duration: text }))} />
 
@@ -308,12 +325,49 @@ function App({ navigation }) {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>{selectedJob?.contactName}</Text>
-          <Text style={styles.modalText}>Job: {selectedJob?.title}</Text>
-          <Text style={styles.modalText}>Description: {selectedJob?.description}</Text>
-          <Text style={styles.modalText}>Location: {selectedJob?.location}</Text>
-          <Text style={styles.modalText}>Scheduled Date: {selectedJob?.scheduledDate}</Text>
-          <Text style={styles.modalText}>Duration: {selectedJob?.duration}</Text>
+
+        <View style={styles.headerContainer}>
+
+          <Text style={styles.headerTitle}>JOB DETAILS</Text>
+          <Text style={styles.headerDate}>
+            {selectedJob?.scheduledDate || "Date not available"}
+          </Text>
+          <Text style={styles.headerTime}>
+            From {selectedJob?.startTime || "N/A"} To {selectedJob?.endTime || "N/A"}
+          </Text>
+        </View>
+
+          
+            {/* Contact Section */}
+          <View style={styles.contactContainer}>
+            <Text style={styles.contactTitle}>CONTACT</Text>
+            <Text style={styles.contactName}>{selectedJob?.contactName || "N/A"}</Text>
+          </View>
+
+           {/* Job Details Section */}
+          <View style={styles.detailsContainer}>
+            <Text style={styles.detailLabel}>Job Type:</Text>
+            <Text style={styles.detailValue}>{selectedJob?.title || "N/A"}</Text>
+
+            <Text style={styles.detailLabel}>Description:</Text>
+            <Text style={styles.detailValue}>{selectedJob?.description || "N/A"}</Text>
+
+            <Text style={styles.detailLabel}>Location:</Text>
+            <Text style={styles.detailValue}>{selectedJob?.location || "N/A"}</Text>
+
+            <Text style={styles.detailLabel}>Job Reference:</Text>
+            <Text style={styles.detailValue}>{selectedJob?.reference || "N/A"}</Text>
+
+            <Text style={styles.detailLabel}>Scheduled Date:</Text>
+            <Text style={styles.detailValue}>
+              {selectedJob?.scheduledDate || "N/A"}
+            </Text>
+
+            <Text style={styles.detailLabel}>Duration:</Text>
+            <Text style={styles.detailValue}>
+              {selectedJob?.duration || "N/A"} Minutes
+            </Text>
+          </View>
 
           {/* Conditional Rendering for Start/End Job Buttons */}
           {selectedJob?.status === "scheduled" && (
@@ -356,17 +410,71 @@ function App({ navigation }) {
 
 
           {(selectedJob?.status === "completed" || selectedJob?.status === "completed with issues") && (
+          <>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: "blue" }]}
-            onPress={() =>
-            navigation.navigate("PdfViewer", {
-            pdfUri: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", // Replace with your actual PDF URI
-            })
-          }
+            onPress={() => {
+              setCurrentJobId(selectedJob?.id); // Set the current job ID
+              setIsPromptVisible(true); // Open the description prompt
+            }}
+      
           >
-            <Text style={styles.actionButtonText}>View Completed Job Sheet</Text>
+            <Text style={styles.actionButtonText}>Complete Worksheet Questions</Text>
 
           </TouchableOpacity>
+
+        {/* Modal for Prompting Description */}
+        {isPromptVisible && (
+          <Modal
+            transparent={true}
+            animationType="slide"
+            visible={isPromptVisible}
+            onRequestClose={() => setIsPromptVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Description of Works Carried Out</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter description..."
+                  value={jobDescriptions[currentJobId] || ""} // Show description for the current job
+                  onChangeText={(text) =>  setJobDescriptions((prevDescriptions) => ({
+                    ...prevDescriptions,
+                    [currentJobId]: text, // Update only the current job's description
+                  }))
+                }
+                />
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, { backgroundColor: "green" }]}
+                    onPress={() => {
+                      if (!jobDescriptions[currentJobId]?.trim()) {
+                        alert("Please provide a description before proceeding.");
+                      } else {
+                        setIsPromptVisible(false); // Close the modal
+                        navigation.navigate("JobCompletionScreen", {
+                          job: selectedJob,
+                          descriptions: jobDescriptions[selectedJob?.id], // Pass the description for the specific job
+                        });
+                      }
+                    }}
+                  >
+                    <Text style={styles.modalButtonText}>Submit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, { backgroundColor: "red" }]}
+                    onPress={() => setIsPromptVisible(false)} // Cancel
+                  >
+                    <Text style={styles.modalButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+
+
+          )}
+          </>
           )}
         </View>
           
@@ -376,159 +484,23 @@ function App({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: "#f0f0f0",
-  },
-  header: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 10,
-    padding: 30,
-    alignItems: "center",
-    elevation: 3,
-  },
-  sectionHeader: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginTop: 15,
-    marginBottom: 5,
-  },
-  jobContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 15,
-    marginBottom: 10,
-    borderRadius: 8,
-    elevation: 3,
-  },
-  iconContainer: {
-    marginRight: 15,
-  },
-  jobDetails: {
-    flex: 1,
-  },
+      const Stack = createStackNavigator();
 
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
 
-  modalContent: {
-    width: "80%",
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 20,
-  },
+      export default function AppNavigator() {
+       
+        return (
+          <View style={styles.container}>
+            {/*<Header /> {/* Add the custom header */}
+          <NavigationContainer>
+            <Stack.Navigator initialRouteName="JobList">
+              <Stack.Screen name="JobList" component={App}  /> 
+              <Stack.Screen name="ProfilePage" component={ProfilePage}/>
+              <Stack.Screen name="Help" component={HelpPage} />
+              <Stack.Screen name="JobCompletionScreen" component={JobCompletionScreen}/>
 
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 15,
-  },
-
-  menuOption: {
-    backgroundColor: "#007bff",
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
-  },
-
-  menuOptionText: {
-    color: "#fff",
-    textAlign: "center",
-    fontWeight: "bold",
-  },
-
-    // Action Buttons (Start, Complete, Close)
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#007bff",
-    padding: 15,
-    borderRadius: 8,
-    justifyContent: "center",
-    marginBottom: 15,
-  },
-  actionButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-
-  contactName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-  jobTitle: {
-    fontSize: 14,
-    color: "#555",
-    marginBottom: 5,
-  },
-  location: {
-    fontSize: 12,
-    color: "#777",
-  },
-  modalContainer: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: "#f0f0f0",
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  modalText: {
-    fontSize: 16,
-    marginBottom: 10,
-  },
-  input: {
-    backgroundColor: "#fff",
-    borderColor: "#ccc",
-    borderWidth: 1,
-    borderRadius: 5,
-    marginBottom: 10,
-    padding: 10,
-  },
-  createButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#007bff",
-    padding: 15,
-    borderRadius: 8,
-    justifyContent: "center",
-    marginTop: 15,
-  },
-  createButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    marginLeft: 5,
-  },
-  buttonGroup: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-});
-
-const Stack = createStackNavigator();
-
-export default function Root() {
-  return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="JobList">
-        <Stack.Screen name="Help" component={HelpPage} />
-        <Stack.Screen name="JobList" component={App} /> 
-        <Stack.Screen name="PdfViewer" component={PdfViewer} options={{ presentation: "modal" }} />
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
-}
+            </Stack.Navigator>
+          </NavigationContainer>
+          </View>
+);  
+}   
